@@ -1,2 +1,3 @@
-web: gunicorn dictionary_backend.wsgi:application
+web: gunicorn backend.dictionary_backend.wsgi:application
+
 
