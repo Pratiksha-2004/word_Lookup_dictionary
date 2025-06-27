@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Word Dictionary</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            background-color: #f9f9f9;
+            color: #222;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .dark-mode {
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        input {
+            padding: 10px;
+            font-size: 16px;
+            width: 250px;
+            margin-right: 10px;
+        }
+        .top-toggle {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+        
+
+        button {
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .section {
+            margin-top: 20px;
+            padding: 10px;
+            border-left: 4px solid #007bff;
+            background-color: #f0f0f0;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+
+        .dark-mode .section {
+            background-color: #333;
+            border-color: #0af;
+            box-shadow: 0 4px 8px rgba(255, 255, 255, 0.1);
+        }
+
+        #loading {
+            display: none;
+            animation: pulse 1.2s infinite;
+        }
+
+        .toggle-dark {
+            float: right;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border: 2px solid #007bff;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+        }
+
+        .auth-links {
+            text-align: right;
+            margin-bottom: 15px;
+        }
+
+        .auth-links a {
+            margin-left: 15px;
+            text-decoration: none;
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        .auth-links a:hover {
+            text-decoration: underline;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+
+   <div class="top-toggle">
+    <button onclick="toggleDarkMode()">🌓 </button>
+</div>
+
+
+    <div class="auth-links">
+    {% if user.is_authenticated %}
+        👋 Welcome, {{ user.username }}!
+        <form method="post" action="{% url 'logout' %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" style="background: none; border: none; color: #007bff; cursor: pointer; font-weight: bold;">Logout</button>
+        </form>
+    {% else %}
+        <a href="{% url 'login_page' %}">Login</a>
+        <a href="{% url 'register_page' %}">Register</a>
+    {% endif %}
+</div>
+
+
+    <h1>📖 Word Dictionary</h1>
+
+    <input type="text" id="wordInput" placeholder="Enter a word">
+    <button onclick="searchWord()">Search</button>
+
+    <p id="loading">🔄 Loading...</p>
+
+    <div id="result"></div>
+
+    {% block content %}{% endblock %}
+
+    <script>
+        function toggleDarkMode() {
+            document.body.classList.toggle("dark-mode");
+        }
+
+        function searchWord() {
+            const word = document.getElementById("wordInput").value.trim();
+            const resultDiv = document.getElementById("result");
+            const loading = document.getElementById("loading");
+            resultDiv.innerHTML = "";
+            if (!word) return;
+
+            loading.style.display = "block";
+
+            fetch(`/search-word/?word=${word}`)
+                .then(response => response.json())
+                .then(data => {
+                    loading.style.display = "none";
+
+                    if (data.error) {
+                        resultDiv.innerHTML = `<p style="color:red;">❌ ${data.error}</p>`;
+                        return;
+                    }
+
+                    resultDiv.innerHTML = `
+                        <div class="section">
+                            <h2>Word:</h2>
+                            <p><strong>${data.word}</strong></p>
+                        </div>
+
+                        <div class="section">
+                            <h2>Pronunciation:</h2>
+                            <p>${data.pronunciation && data.pronunciation.trim() !== '' ? data.pronunciation : 'Not available'}</p>
+                            ${data.pronunciation_audio ? `<audio controls src="${data.pronunciation_audio}"></audio>` : ''}
+                        </div>
+
+                        <div class="section">
+                            <h2>Meanings:</h2>
+                            <ul>
+                                ${data.meanings.map(m => `<li><strong>${m.partOfSpeech}</strong>: ${m.definition}</li>`).join('')}
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h2>Synonyms:</h2>
+                            <p>${data.synonyms.length ? data.synonyms.join(', ') : 'Not available'}</p>
+                        </div>
+
+                        <div class="section">
+                            <h2>Antonyms:</h2>
+                            <p>${data.antonyms.length ? data.antonyms.join(', ') : 'Not available'}</p>
+                        </div>
+                    `;
+                })
+                .catch(err => {
+                    loading.style.display = "none";
+                    resultDiv.innerHTML = `<p style="color:red;">❌ Something went wrong.</p>`;
+                    console.error(err);
+                });
+        }
+    </script>
+</body>
+</html>
